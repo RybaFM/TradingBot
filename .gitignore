@@ -1,0 +1,24 @@
+# Secrets and Environment Variables
+.env
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+
+# Python caching mechanisms
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# JetBrains / PyCharm configuration directory
+.idea/
+
+# Local databases (Keeps your live trading logs off the cloud)
+*.db
+*.sqlite3
+
+# Operating system specific files
+.DS_Store
+Thumbs.db
