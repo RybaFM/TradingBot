@@ -142,6 +142,9 @@ class Crawler:
         self.newsAnalyzer = newsAnalyzer
         self.portfolioOperator = portfolioOperator
 
+    def get_last_visited_url(self):
+        return self.latest_visited_url
+
     def process_article(self, link):
         text = requests.get(link).text
         parsed = BeautifulSoup(text, 'html.parser')
