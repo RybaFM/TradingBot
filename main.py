@@ -9,6 +9,10 @@ connection = sqlite3.connect('database.db')
 cursor = connection.cursor()
 current_stocks = {}
 
+#cursor.execute('''
+#    UPDATE bot_variables SET dollars = ?, cents = ?, last_link = ? WHERE id = 1
+#''', (30000, 0, ''))
+
 cursor.execute("SELECT * FROM stocks")
 rows = cursor.fetchall()
 for row in rows:
@@ -23,6 +27,7 @@ print(dollars, cents, latest_visited_url)
 print(current_stocks)
 budget = dollars + cents/100
 
+connection.close()
 
 
 
@@ -32,5 +37,3 @@ crawler = Crawler(
     PortfolioOperator(current_stocks, budget)
     )
 crawler.process_webpage("https://techcrunch.com/")
-
-connection.close()

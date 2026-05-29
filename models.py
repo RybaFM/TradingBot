@@ -4,6 +4,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 import sqlite3
+import yfinance as yf
 
 class NewsAnalyzer:
     
@@ -71,7 +72,7 @@ class NewsAnalyzer:
           }}
         }}
         """
-        
+        #must change this part so it will return not shares_count but friction [0, 1]
         try:
             response = self.client.models.generate_content(
                 model=model_id,
@@ -107,10 +108,38 @@ class PortfolioOperator:
         return self.budget
 
     def get_actual_prices(self, stock):
-        return 100
-        #later from here https://www.marketwatch.com/investing/stock/f?mod=search_symbol    
+        try:
+            ticker = yf.Ticker(stock.upper())
+            price = ticker.fast_info['lastPrice']
+            print(price)
+            return float(price)
+        except Exception as e:
+            print(f"Error occured: {e}")
+
+    def save_to_db(self):
+        total = int(round(self.budget * 100))
+        dollars = total // 100
+        cents = total % 100
+        
+        with sqlite3.connect('database.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute('''
+                UPDATE bot_variables
+                SET dollars = ?, cents = ?
+                WHERE id = 1
+            ''', (dollars, cents))
+
+            for stock in self.current_stocks:
+                cursor.execute("""
+                    INSERT INTO stocks (stock_name, stock_count)
+                    VALUES (?, ?)
+                    ON CONFLICT(stock_name) DO UPDATE SET stock_count = EXCLUDED.stock_count
+                """, (stock, self.current_stocks[stock]))
+            connection.commit()
 
     def process_data(self, data):
+        if not data: return
+        
         for name in data.keys():
             stock_count = data[name]['shares_count']
             stock_price = self.get_actual_prices(name)
@@ -133,6 +162,8 @@ class PortfolioOperator:
                 self.budget -= price_total
             print(self.current_stocks)
             print(self.budget)
+        self.save_to_db()
+        
 
 
 class Crawler:
@@ -153,6 +184,16 @@ class Crawler:
         data_to_process = self.newsAnalyzer.predict(article, self.portfolioOperator.get_current_stocks(), self.portfolioOperator.get_budget())
         self.portfolioOperator.process_data(data_to_process)
         print('\n\n\n')
+
+    def save_url_to_database(self):
+        with sqlite3.connect('database.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute('''
+                UPDATE bot_variables
+                SET last_link = ?
+                WHERE id = 1
+            ''', (self.latest_visited_url,))
+            connection.commit()
         
     def process_webpage(self, url0):
         text = requests.get(url0).text
@@ -174,3 +215,5 @@ class Crawler:
         for link in reversed(links_to_process):
             self.process_article(link)
             time.sleep(3)
+
+        self.save_url_to_database()
