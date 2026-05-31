@@ -1,6 +1,7 @@
 from google import genai
 import json
 import time
+from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import sqlite3
@@ -119,7 +120,7 @@ class PortfolioOperator:
         except Exception as e:
             print(f"Error occured: {e}")
 
-    def save_to_db(self):
+    def save_to_db(self, operations_history):
         total = int(round(self.budget * 100))
         dollars = total // 100
         cents = total % 100
@@ -138,6 +139,18 @@ class PortfolioOperator:
                     VALUES (?, ?)
                     ON CONFLICT(stock_name) DO UPDATE SET stock_count = EXCLUDED.stock_count
                 """, (stock, self.current_stocks[stock]))
+
+            for operation in operations_history:
+                cursor.execute("""
+                    INSERT INTO operations_history (stock_name, operation, stock_count, stock_price, remaining_budget, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    operation['stock_name'],
+                    operation['operation'],
+                    operation['count'],
+                    operation['stock_price'],
+                    operation['remaining_budget'],
+                    operation['timestamp']))
             connection.commit()
 
     def process_data(self, data):
@@ -145,6 +158,11 @@ class PortfolioOperator:
 
         operations_history = []
         available_budget = min(self.budget, self.max_trade_value)
+        sum_frictions = sum([data[name]['confidence_weight'] for name in data if data[name]['action'] == 'Buy'])
+        multiplicator = 1
+        if sum_frictions > 1:
+            multiplicator = 1/sum_frictions
+            
         for name in data.keys():
             stock_friction = data[name]['confidence_weight']
             stock_price = self.get_actual_prices(name)
@@ -156,8 +174,15 @@ class PortfolioOperator:
                     if stocks_to_sell != 0:
                         self.current_stocks[name] -= stocks_to_sell
                         self.budget += price_total
-                        operations_history.append({'stock_name': name, 'operation': 'sell', 'count': stocks_to_sell, 'stock_price': stock_price, 'remaining_budget': self.budget})
+                        operations_history.append({
+                            'stock_name': name,
+                            'operation': 'sell',
+                            'count': stocks_to_sell,
+                            'stock_price': stock_price,
+                            'remaining_budget': self.budget,
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
             else:
+                stock_friction *= multiplicator
                 stocks_count = math.floor(self.max_trade_value*stock_friction/stock_price)
                 price_total = stocks_count * stock_price
                 if name not in self.current_stocks:
@@ -169,12 +194,15 @@ class PortfolioOperator:
                     self.current_stocks[name] += stocks_count
                     self.budget -= price_total
                     available_budget -= price_total
-                    operations_history.append({'stock_name': name, 'operation': 'buy', 'count': stocks_count, 'stock_price': stock_price, 'remaining_budget': self.budget})
-            print(self.current_stocks)
-            print(self.budget)
-            print(operations_history)
+                    operations_history.append({
+                        'stock_name': name,
+                        'operation': 'buy',
+                        'count': stocks_count,
+                        'stock_price': stock_price,
+                        'remaining_budget': self.budget,
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
                     
-        self.save_to_db()
+        self.save_to_db(operations_history)
         
 
 

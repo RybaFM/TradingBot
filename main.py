@@ -9,9 +9,9 @@ connection = sqlite3.connect('database.db')
 cursor = connection.cursor()
 current_stocks = {}
 
-cursor.execute('''
-    UPDATE bot_variables SET dollars = ?, cents = ?, last_link = ? WHERE id = 1
-''', (30000, 0, ''))
+#cursor.execute('''
+#    UPDATE bot_variables SET dollars = ?, cents = ?, last_link = ? WHERE id = 1
+#''', (30000, 0, ''))
 
 cursor.execute("SELECT * FROM stocks")
 rows = cursor.fetchall()
@@ -37,3 +37,15 @@ crawler = Crawler(
     PortfolioOperator(current_stocks, budget, mxTrdValue)
     )
 crawler.process_webpage("https://techcrunch.com/")
+
+'''cursor.execute("SELECT * FROM operations_history")
+row = cursor.fetchall()
+for i in row:
+    print(i)
+
+cursor.execute("SELECT * FROM stocks")
+rows = cursor.fetchall()
+for row in rows:
+    print(row)'''
+
+
