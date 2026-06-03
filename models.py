@@ -155,6 +155,7 @@ class PortfolioOperator:
 
     def buy_stocks(self, stock, stock_count, price):
         price_total = stock_count * price
+        if price > self.budget: return
         if stock not in self.current_stocks:
             self.current_stocks[stock] = 0
         self.current_stocks[stock] += stock_count
@@ -170,6 +171,8 @@ class PortfolioOperator:
         return (price_total, info)
 
     def sell_stocks(self, stock, stock_count, price):
+        if stock not in self.current_stocks: return
+        if self.current_stocks[stock] < stock_count: return
         price_total = stock_count * price
         self.current_stocks[stock] -= stock_count
         self.budget += price_total
