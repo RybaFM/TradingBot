@@ -115,10 +115,10 @@ class PortfolioOperator:
         try:
             ticker = yf.Ticker(stock.upper())
             price = ticker.fast_info['lastPrice']
-            print(price)
             return float(price)
         except Exception as e:
             print(f"Error occured: {e}")
+            return float(-1)
 
     def save_to_db(self, operations_history):
         total = int(round(self.budget * 100))
@@ -153,6 +153,36 @@ class PortfolioOperator:
                     operation['timestamp']))
             connection.commit()
 
+    def buy_stocks(self, stock, stock_count, price):
+        price_total = stock_count * price
+        if stock not in self.current_stocks:
+            self.current_stocks[stock] = 0
+        self.current_stocks[stock] += stock_count
+        self.budget -= price_total
+        info = {
+            'stock_name': stock,
+            'operation': 'buy',
+            'count': stock_count,
+            'stock_price': price,
+            'remaining_budget': self.budget,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        print(info)
+        return (price_total, info)
+
+    def sell_stocks(self, stock, stock_count, price):
+        price_total = stock_count * price
+        self.current_stocks[stock] -= stock_count
+        self.budget += price_total
+        info = {
+            'stock_name': stock,
+            'operation': 'sell',
+            'count': stock_count,
+            'stock_price': price,
+            'remaining_budget': self.budget,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        print(info)
+        return info
+
     def process_data(self, data):
         if not data: return
 
@@ -166,41 +196,24 @@ class PortfolioOperator:
         for name in data.keys():
             stock_friction = data[name]['confidence_weight']
             stock_price = self.get_actual_prices(name)
-            #maybe I should add two separate funcs sell_stocks, buy_stocks
-            if data[name]['action'] == 'Sell':
-                if name in self.current_stocks:
-                    stocks_to_sell = math.floor(self.current_stocks[name]*stock_friction)
-                    price_total = stocks_to_sell * stock_price
-                    if stocks_to_sell != 0:
-                        self.current_stocks[name] -= stocks_to_sell
-                        self.budget += price_total
-                        operations_history.append({
-                            'stock_name': name,
-                            'operation': 'sell',
-                            'count': stocks_to_sell,
-                            'stock_price': stock_price,
-                            'remaining_budget': self.budget,
-                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
-            else:
-                stock_friction *= multiplicator
-                stocks_count = math.floor(self.max_trade_value*stock_friction/stock_price)
-                price_total = stocks_count * stock_price
-                if name not in self.current_stocks:
-                    self.current_stocks[name] = 0
-                if available_budget < price_total:
-                    stocks_count = math.floor(available_budget/stock_price)
+            if stock_price != -1:
+                if data[name]['action'] == 'Sell':
+                    if name in self.current_stocks:
+                        stocks_to_sell = math.floor(self.current_stocks[name]*stock_friction)
+                        if stocks_to_sell != 0:
+                            info = self.sell_stocks(name, stocks_to_sell, stock_price)
+                            operations_history.append(info)
+                else:
+                    stock_friction *= multiplicator
+                    stocks_count = math.floor(self.max_trade_value*stock_friction/stock_price)
                     price_total = stocks_count * stock_price
-                if available_budget >= price_total and stocks_count != 0:
-                    self.current_stocks[name] += stocks_count
-                    self.budget -= price_total
-                    available_budget -= price_total
-                    operations_history.append({
-                        'stock_name': name,
-                        'operation': 'buy',
-                        'count': stocks_count,
-                        'stock_price': stock_price,
-                        'remaining_budget': self.budget,
-                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+                    if available_budget < price_total:
+                        stocks_count = math.floor(available_budget/stock_price)
+                        price_total = stocks_count * stock_price
+                    if available_budget >= price_total and stocks_count != 0:
+                        price_total, transaction_info = self.buy_stocks(name, stocks_count, stock_price)
+                        available_budget -= price_total
+                        operations_history.append(transaction_info)
                     
         self.save_to_db(operations_history)
         
@@ -246,14 +259,14 @@ class Crawler:
             link = element.select_one('h3.loop-card__title > a').get('href')
             if link == self.latest_visited_url: break
             time_post = element.select_one('time').text.strip().split(' ')
-            if (time_post[1] == 'minute' or time_post[1] == 'minutes' or
-                (time_post[1] == 'hour' or time_post[1] == 'hours') and int(time_post[0]) <= 15):
-                if i == 0: self.latest_visited_url = link
+            if (time_post[1] == 'second' or time_post[1] == 'seconds' or
+                time_post[1] == 'minute' or time_post[1] == 'minutes' or
+                (time_post[1] == 'hour' or time_post[1] == 'hours') and int(time_post[0]) <= 3):
                 links_to_process.append(link)
             else: break
             
         for link in reversed(links_to_process):
+            self.latest_visited_url = link
+            self.save_url_to_database()
             self.process_article(link)
             time.sleep(3)
-
-        self.save_url_to_database()

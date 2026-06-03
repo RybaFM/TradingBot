@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Trading Bot Performance</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart', 'bar']});
+      
+      google.charts.setOnLoadCallback(drawBudgetChart);
+      google.charts.setOnLoadCallback(drawPopularStocksChart);
+      google.charts.setOnLoadCallback(drawPieChart);
+
+      function drawBudgetChart() {
+        var rawData = [['Transaction Time', 'Remaining Budget']];
+        var dbData = /* [[ */ {{ chart_data|tojson }} /* ]] */;
+        var finalData = rawData.concat(dbData);
+        
+        if (dbData.length === 0) {
+            finalData = [['Transaction Time', 'Remaining Budget'], ['No Trades Yet', 30000.00]];
+        }
+
+        var data = google.visualization.arrayToDataTable(finalData);
+
+        var options = {
+          title: 'Trading Bot Capital Runway (Remaining Budget Over Time)',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          vAxis: { title: 'Available Cash ($)', format: 'currency' },
+          hAxis: { title: 'Timeline (Chronological Order)' },
+          colors: ['#28a745']
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+        chart.draw(data, options);
+      }
+
+      function drawPopularStocksChart() {
+        var rawData = [['Stock Ticker', 'Total Operations']];
+        var dbData = /* [[ */ {{ most_popular_stocks|tojson }} /* ]] */;
+        var finalData = rawData.concat(dbData);
+
+        if (dbData.length === 0) {
+            finalData = [['Stock Ticker', 'Total Operations'], ['No Assets Traded', 0]];
+        }
+
+        var data = google.visualization.arrayToDataTable(finalData);
+
+        var options = {
+          width: 800,
+          legend: { position: 'none' },
+          chart: {
+            title: 'Most Active Asset Tickers',
+            subtitle: 'Popularity sorted by aggregate volume of recorded execution loops'
+          },
+          axes: {
+            x: { 0: { side: 'bottom', label: 'Assets (Company Ticker Symbols)' } }
+          },
+          bar: { groupWidth: "75%" },
+          colors: ['#007bff']
+        };
+
+        var chart = new google.charts.Bar(document.getElementById('top_x_div'));
+        chart.draw(data, google.charts.Bar.convertOptions(options));
+      }
+
+      function drawPieChart() {
+        var rawData = [['Operation', 'Total Shares Traded']];
+        var dbData = /* [[ */ {{ buy_sell_fraction|tojson }} /* ]] */;
+        var finalData = rawData.concat(dbData);
+
+        if (dbData.length === 0) {
+            finalData = [['Operation', 'Total Shares Traded'], ['No Trades', 1]];
+        }
+
+        var data = google.visualization.arrayToDataTable(finalData);
+
+        var options = {
+          title: 'Trading Behavior Distribution (Total Volume Bought vs. Sold)',
+          slices: {
+            0: { color: '#28a745' },
+            1: { color: '#dc3545' }
+          }
+        };
+
+        var chart = new google.visualization.PieChart(document.getElementById('piechart'));
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Portfolio Operational Analytics Dashboard</h1>
+    <hr>
+    
+    <div id="curve_chart" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
+    
+    <hr>
+    
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div id="top_x_div" style="width: 100%; max-width: 600px; height: 400px;"></div>
+        
+        <div id="piechart" style="width: 100%; max-width: 500px; height: 400px;"></div>
+    </div>
+  </body>
+</html>
