@@ -28,7 +28,7 @@ def home():
     chart_data = [[row[0], float(row[1])] for row in rows]
 
     cursor.execute('''
-        SELECT COUNT(id) as count, stock_name
+        SELECT SUM(stock_price*stock_count) as count, stock_name
         FROM operations_history
         GROUP BY stock_name
         ORDER BY count DESC
@@ -37,17 +37,26 @@ def home():
     most_popular_stocks = [[row[1], row[0]] for row in rows2]
 
     cursor.execute('''
-        SELECT SUM(stock_count), operation
+        SELECT COUNT(id), operation
         FROM operations_history
         GROUP BY operation
     ''')
     rows3 = cursor.fetchall()
     buy_sell_fraction = [[row[1], row[0]] for row in rows3]
+
+    cursor.execute('''
+        SELECT timestamp, total_value
+        FROM portfolio_history
+        ORDER BY id ASC
+    ''')
+    rows4 = cursor.fetchall()
+    total_wealth = [[row[0], float(row[1])] for row in rows4]
     
     return render_template('main.html',
                            chart_data=chart_data,
                            most_popular_stocks=most_popular_stocks,
-                           buy_sell_fraction=buy_sell_fraction)
+                           buy_sell_fraction=buy_sell_fraction,
+                           total_wealth=total_wealth)
 
 if __name__ == '__main__':
     app.run(debug=True)

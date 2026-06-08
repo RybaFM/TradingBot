@@ -7,14 +7,31 @@ import time
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
+#start - 64,933.74 $
+'''connection = sqlite3.connect('database.db')
+cursor = connection.cursor()
+cursor.execute("DELETE FROM operations_history")
+cursor.execute("DELETE FROM stocks")
+starting_portfolio = [
+    ('META', 25),
+    ('AAPL', 15),
+    ('GOOGL', 20),
+    ('MSFT', 12),
+    ('TSLA', 8)
+]
+cursor.executemany("INSERT INTO stocks VALUES (?, ?)", starting_portfolio)
+cursor.execute("DELETE FROM bot_variables")
+cursor.execute('''
+    #INSERT INTO bot_variables (id, dollars, cents, last_link) 
+    #VALUES (1, 30000, 0, '')
+''')
+connection.commit()
+connection.close()'''
+
 def load_from_db():
     connection = sqlite3.connect('database.db')
     cursor = connection.cursor()
     current_stocks = {}
-
-    #cursor.execute('''
-    #    UPDATE bot_variables SET dollars = ?, cents = ?, last_link = ? WHERE id = 1
-    #''', (30000, 0, ''))
 
     cursor.execute("SELECT * FROM stocks")
     rows = cursor.fetchall()
@@ -31,17 +48,7 @@ def load_from_db():
     print(current_stocks)
     return current_stocks, budget, latest_visited_url
 
-'''cursor.execute("SELECT * FROM operations_history")
-row = cursor.fetchall()
-for i in row:
-    print(i)
-
-cursor.execute("SELECT * FROM stocks")
-rows = cursor.fetchall()
-for row in rows:
-    print(row)'''
-
-for i in range(3):
+for i in range(30):
     try:
         print(f'Iteration {i}')
         current_stocks, budget, latest_visited_url = load_from_db()
@@ -52,6 +59,7 @@ for i in range(3):
             PortfolioOperator(current_stocks, budget, mxTrdValue)
             )
         crawler.process_webpage("https://techcrunch.com/")
+        crawler.evaluate_portfolio()
         time.sleep(60)
     except Exception as e:
         print(f'Error occured: {e}')

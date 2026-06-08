@@ -1,0 +1,55 @@
+Author: Riabikov Yaroslav
+
+Submitted files
+---------------
+main.py - responsible for models from models.py
+models.py - all entities used to trade stocks
+create_db.sql - sql query to create database and tables
+db_init.py - executes create_db.sql
+database.db - database itself
+server.py - server of webpage with statistics
+templates/main.html - page with statistics
+
+Data scraping
+--------------
+All data was used to make predictions was scraped from https://techcrunch.com/ website using crawler
+Stock prices I searched via yfinance library
+
+Data analysis
+-------------
+For data analysis I used JS charts.
+1. Line chart used to show available cash throughout bot's work
+2. Line chart used to show total capital.
+3. Barplot used to show stocks that bot trades the most
+4. Piechart used to show whether bot mostly buys aggressively or sells
+
+How can be run
+--------------
+0. installing needed libraries, create .env file with an API_key (API_key here: https://aistudio.google.com/api-keys)
+echo "GEMINI_API_KEY=your_actual_api_key_here" > .env
+python3 -m venv env --without-pip
+source env/bin/activate
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3 get-pip.py
+rm get-pip.py
+pip install python-dotenv google-genai requests beautifulsoup4 yfinance flask
+1. creating db
+python3 db_init.py
+2. running script
+screen
+qrsh
+cd PROJECT_FOLDER
+source env/bin/activate
+python3 main.py
+3. running webpage
+export FLASK_APP=server.py
+export FLASK_ENV=development
+flask run --port=PORT 
+#In another window
+ssh -L PORT:localhost:PORT username@vyuka.compbio.fmph.uniba.sk
+
+Resources used
+--------------
+https://techcrunch.com/ - website used to scrape data to make predictions
+https://www.marketwatch.com/ - website used to compare stock prices (was used before yfinance)
+https://aistudio.google.com/api-keys - used to get API_key for genai

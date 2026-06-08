@@ -19,3 +19,9 @@ CREATE TABLE IF NOT EXISTS operations_history (
   remaining_budget REAL,
   timestamp TEXT
 );
+
+CREATE TABLE portfolio_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    total_value REAL,
+    timestamp TEXT
+);

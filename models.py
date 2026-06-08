@@ -31,8 +31,6 @@ class NewsAnalyzer:
         if not article_text:
             return
 
-        # Using the exact ID from your successful list: gemini-3.1-flash-lite
-        # Note: We remove the 'models/' prefix as the SDK adds it automatically
         model_id = "gemini-3.1-flash-lite"
         system_instruction = f"""
         You are an automated algorithmic trading assistant built for a university simulation project. 
@@ -120,6 +118,25 @@ class PortfolioOperator:
             print(f"Error occured: {e}")
             return float(-1)
 
+    def evaluate_portfolio(self):
+        total = self.budget
+        for name in self.current_stocks:
+            price = self.get_actual_prices(name)
+            if price != -1:
+                total += price * self.current_stocks[name]
+            else:
+                print(f"Could not find price for {name}. Skipping...")
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with sqlite3.connect('database.db') as connection:
+            cursor = connection.cursor()
+            cursor.execute("""
+                INSERT INTO portfolio_history (total_value, timestamp)
+                VALUES (?, ?)
+            """, (total, timestamp))
+            connection.commit()
+
+        return total
+
     def save_to_db(self, operations_history):
         total = int(round(self.budget * 100))
         dollars = total // 100
@@ -155,7 +172,7 @@ class PortfolioOperator:
 
     def buy_stocks(self, stock, stock_count, price):
         price_total = stock_count * price
-        if price > self.budget: return
+        if price_total > self.budget: return
         if stock not in self.current_stocks:
             self.current_stocks[stock] = 0
         self.current_stocks[stock] += stock_count
@@ -232,14 +249,19 @@ class Crawler:
     def get_last_visited_url(self):
         return self.latest_visited_url
 
+    def evaluate_portfolio(self):
+        return self.portfolioOperator.evaluate_portfolio()
+
     def process_article(self, link):
         text = requests.get(link).text
         parsed = BeautifulSoup(text, 'html.parser')
         paragraphs = parsed.select('main div > p.wp-block-paragraph')
         article = '\n'.join([paragraph.text.strip() for paragraph in paragraphs])
         data_to_process = self.newsAnalyzer.predict(article, self.portfolioOperator.get_current_stocks(), self.portfolioOperator.get_budget())
+        if data_to_process is None: return False
         self.portfolioOperator.process_data(data_to_process)
         print('\n\n\n')
+        return True
 
     def save_url_to_database(self):
         with sqlite3.connect('database.db') as connection:
@@ -264,12 +286,14 @@ class Crawler:
             time_post = element.select_one('time').text.strip().split(' ')
             if (time_post[1] == 'second' or time_post[1] == 'seconds' or
                 time_post[1] == 'minute' or time_post[1] == 'minutes' or
-                (time_post[1] == 'hour' or time_post[1] == 'hours') and int(time_post[0]) <= 3):
+                (time_post[1] == 'hour' or time_post[1] == 'hours') and int(time_post[0]) <= 5):
                 links_to_process.append(link)
             else: break
             
         for link in reversed(links_to_process):
-            self.latest_visited_url = link
-            self.save_url_to_database()
-            self.process_article(link)
+            temp = self.process_article(link)
+            if temp:
+                self.latest_visited_url = link
+                self.save_url_to_database()
+            else:break
             time.sleep(3)

@@ -7,6 +7,7 @@
       google.charts.load('current', {'packages':['corechart', 'bar']});
       
       google.charts.setOnLoadCallback(drawBudgetChart);
+      google.charts.setOnLoadCallback(drawTotalWealthChart);
       google.charts.setOnLoadCallback(drawPopularStocksChart);
       google.charts.setOnLoadCallback(drawPieChart);
 
@@ -34,13 +35,37 @@
         chart.draw(data, options);
       }
 
+      function drawTotalWealthChart() {
+        var rawData = [['Transaction Time', 'Total Wealth']];
+        var dbData = /* [[ */ {{ total_wealth|tojson }} /* ]] */;
+        var finalData = rawData.concat(dbData);
+        
+        if (dbData.length === 0) {
+            finalData = [['Transaction Time', 'Total Wealth'], ['No Trades Yet', 30000.00]];
+        }
+
+        var data = google.visualization.arrayToDataTable(finalData);
+
+        var options = {
+          title: 'Trading Bot Total Capital',
+          curveType: 'function',
+          legend: { position: 'bottom' },
+          vAxis: { title: 'Estimated Total ($)', format: 'currency' },
+          hAxis: { title: 'Timeline (Chronological Order)' },
+          colors: ['#28a745']
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('curve_chart_total'));
+        chart.draw(data, options);
+      }
+
       function drawPopularStocksChart() {
-        var rawData = [['Stock Ticker', 'Total Operations']];
+        var rawData = [['Stock Ticker', 'Total ($)']];
         var dbData = /* [[ */ {{ most_popular_stocks|tojson }} /* ]] */;
         var finalData = rawData.concat(dbData);
 
         if (dbData.length === 0) {
-            finalData = [['Stock Ticker', 'Total Operations'], ['No Assets Traded', 0]];
+            finalData = [['Stock Ticker', 'Total ($)'], ['No Assets Traded', 0]];
         }
 
         var data = google.visualization.arrayToDataTable(finalData);
@@ -50,7 +75,7 @@
           legend: { position: 'none' },
           chart: {
             title: 'Most Active Asset Tickers',
-            subtitle: 'Popularity sorted by aggregate volume of recorded execution loops'
+            subtitle: 'Popularity sorted by money flow'
           },
           axes: {
             x: { 0: { side: 'bottom', label: 'Assets (Company Ticker Symbols)' } }
@@ -93,6 +118,10 @@
     
     <div id="curve_chart" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
     
+    <hr>
+
+    <div id="curve_chart_total" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
+
     <hr>
     
     <div style="display: flex; flex-wrap: wrap; gap: 20px;">
