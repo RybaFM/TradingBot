@@ -1,133 +1,157 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Trading Bot Performance</title>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-    <script type="text/javascript">
-      google.charts.load('current', {'packages':['corechart', 'bar']});
-      
-      google.charts.setOnLoadCallback(drawBudgetChart);
-      google.charts.setOnLoadCallback(drawTotalWealthChart);
-      google.charts.setOnLoadCallback(drawPopularStocksChart);
-      google.charts.setOnLoadCallback(drawPieChart);
 
-      function drawBudgetChart() {
-        var rawData = [['Transaction Time', 'Remaining Budget']];
-        var dbData = /* [[ */ {{ chart_data|tojson }} /* ]] */;
-        var finalData = rawData.concat(dbData);
-        
-        if (dbData.length === 0) {
-            finalData = [['Transaction Time', 'Remaining Budget'], ['No Trades Yet', 30000.00]];
-        }
+<head>
+  <title>Trading Bot Performance</title>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript">
+    google.charts.load('current', { 'packages': ['corechart', 'bar'] });
 
-        var data = google.visualization.arrayToDataTable(finalData);
+    google.charts.setOnLoadCallback(drawBudgetChart);
+    google.charts.setOnLoadCallback(drawTotalWealthChart);
+    google.charts.setOnLoadCallback(drawPopularStocksChart);
+    google.charts.setOnLoadCallback(drawPieChart);
 
-        var options = {
-          title: 'Trading Bot Capital Runway (Remaining Budget Over Time)',
-          curveType: 'function',
-          legend: { position: 'bottom' },
-          vAxis: { title: 'Available Cash ($)', format: 'currency' },
-          hAxis: { title: 'Timeline (Chronological Order)' },
-          colors: ['#28a745']
-        };
+    function drawBudgetChart() {
+      var rawData = [['Transaction Time', 'Remaining Budget']];
+      var dbData = /* [[ */ {{ chart_data| tojson
+    }} /* ]] */;
+    var finalData = rawData.concat(dbData);
 
-        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
-        chart.draw(data, options);
+    if (dbData.length === 0) {
+      finalData = [['Transaction Time', 'Remaining Budget'], ['No Trades Yet', 30000.00]];
+    }
+
+    var data = google.visualization.arrayToDataTable(finalData);
+
+    // CHANGED PART
+    var firstLabel = dbData.length > 0 ? dbData[0][0] : 'N/A'; // First operation date
+    var lastLabel = dbData.length > 0 ? dbData[dbData.length - 1][0] : 'N/A'; // Last operation date
+    var amount_operations = dbData.length; // Count of performed operations
+    var rangeText = dbData.length > 0 ? ('from ' + firstLabel + '  to  ' + lastLabel + ' (operations: ' + amount_operations + ')') : 'No Trades Yet'; // Using three previous lines I form x-label
+
+    var options = {
+      title: 'Trading Bot Capital Runway (Remaining Budget Over Time)',
+      curveType: 'function',
+      legend: { position: 'bottom' },
+      vAxis: { title: 'Available Cash ($)', format: 'currency' },
+      hAxis: {
+        title: rangeText, // only rangeText will be displayed on x-axis label, without countless dates that are not readable.
+        textPosition: 'none',
+      },
+      colors: ['#28a745']
+    };
+
+    var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+    chart.draw(data, options);
       }
 
-      function drawTotalWealthChart() {
-        var rawData = [['Transaction Time', 'Total Wealth']];
-        var dbData = /* [[ */ {{ total_wealth|tojson }} /* ]] */;
-        var finalData = rawData.concat(dbData);
-        
-        if (dbData.length === 0) {
-            finalData = [['Transaction Time', 'Total Wealth'], ['No Trades Yet', 30000.00]];
-        }
+    function drawTotalWealthChart() {
+      var rawData = [['Transaction Time', 'Total Wealth']];
+      var dbData = /* [[ */ {{ total_wealth| tojson
+    }} /* ]] */;
+    var finalData = rawData.concat(dbData);
 
-        var data = google.visualization.arrayToDataTable(finalData);
+    if (dbData.length === 0) {
+      finalData = [['Transaction Time', 'Total Wealth'], ['No Trades Yet', 30000.00]];
+    }
 
-        var options = {
-          title: 'Trading Bot Total Capital',
-          curveType: 'function',
-          legend: { position: 'bottom' },
-          vAxis: { title: 'Estimated Total ($)', format: 'currency' },
-          hAxis: { title: 'Timeline (Chronological Order)' },
-          colors: ['#28a745']
-        };
+    var data = google.visualization.arrayToDataTable(finalData);
 
-        var chart = new google.visualization.LineChart(document.getElementById('curve_chart_total'));
-        chart.draw(data, options);
+    // CHANGED PART
+    var firstLabel = dbData.length > 0 ? dbData[0][0] : 'N/A'; // First run date
+    var lastLabel = dbData.length > 0 ? dbData[dbData.length - 1][0] : 'N/A'; // Last run date
+    var rangeText = dbData.length > 0 ? ('from ' + firstLabel + '  to  ' + lastLabel) : 'No Trades Yet'; // Using two previous line I form x-label
+
+    var options = {
+      title: 'Trading Bot Total Capital',
+      curveType: 'function',
+      legend: { position: 'bottom' },
+      vAxis: { title: 'Estimated Total ($)', format: 'currency' },
+      hAxis: {
+        title: rangeText, // only rangeText will be displayed on x-axis label, without countless dates that are not readable.
+        textPosition: 'none',
+      },
+      colors: ['#28a745']
+    };
+
+    var chart = new google.visualization.LineChart(document.getElementById('curve_chart_total'));
+    chart.draw(data, options);
       }
 
-      function drawPopularStocksChart() {
-        var rawData = [['Stock Ticker', 'Total ($)']];
-        var dbData = /* [[ */ {{ most_popular_stocks|tojson }} /* ]] */;
-        var finalData = rawData.concat(dbData);
+    function drawPopularStocksChart() {
+      var rawData = [['Stock Ticker', 'Total ($)']];
+      var dbData = /* [[ */ {{ most_popular_stocks| tojson
+    }} /* ]] */;
+    var finalData = rawData.concat(dbData);
 
-        if (dbData.length === 0) {
-            finalData = [['Stock Ticker', 'Total ($)'], ['No Assets Traded', 0]];
-        }
+    if (dbData.length === 0) {
+      finalData = [['Stock Ticker', 'Total ($)'], ['No Assets Traded', 0]];
+    }
 
-        var data = google.visualization.arrayToDataTable(finalData);
+    var data = google.visualization.arrayToDataTable(finalData);
 
-        var options = {
-          width: 800,
-          legend: { position: 'none' },
-          chart: {
-            title: 'Most Active Asset Tickers',
-            subtitle: 'Popularity sorted by money flow'
-          },
-          axes: {
-            x: { 0: { side: 'bottom', label: 'Assets (Company Ticker Symbols)' } }
-          },
-          bar: { groupWidth: "75%" },
-          colors: ['#007bff']
-        };
+    var options = {
+      width: 800,
+      legend: { position: 'none' },
+      chart: {
+        title: 'Most Active Asset Tickers',
+        subtitle: 'Popularity sorted by money flow'
+      },
+      axes: {
+        x: { 0: { side: 'bottom', label: 'Assets (Company Ticker Symbols)' } }
+      },
+      bar: { groupWidth: "75%" },
+      colors: ['#007bff']
+    };
 
-        var chart = new google.charts.Bar(document.getElementById('top_x_div'));
-        chart.draw(data, google.charts.Bar.convertOptions(options));
+    var chart = new google.charts.Bar(document.getElementById('top_x_div'));
+    chart.draw(data, google.charts.Bar.convertOptions(options));
       }
 
-      function drawPieChart() {
-        var rawData = [['Operation', 'Total Shares Traded']];
-        var dbData = /* [[ */ {{ buy_sell_fraction|tojson }} /* ]] */;
-        var finalData = rawData.concat(dbData);
+    function drawPieChart() {
+      var rawData = [['Operation', 'Total Shares Traded']];
+      var dbData = /* [[ */ {{ buy_sell_fraction| tojson
+    }} /* ]] */;
+    var finalData = rawData.concat(dbData);
 
-        if (dbData.length === 0) {
-            finalData = [['Operation', 'Total Shares Traded'], ['No Trades', 1]];
-        }
+    if (dbData.length === 0) {
+      finalData = [['Operation', 'Total Shares Traded'], ['No Trades', 1]];
+    }
 
-        var data = google.visualization.arrayToDataTable(finalData);
+    var data = google.visualization.arrayToDataTable(finalData);
 
-        var options = {
-          title: 'Trading Behavior Distribution (Total Volume Bought vs. Sold)',
-          slices: {
-            0: { color: '#28a745' },
-            1: { color: '#dc3545' }
-          }
-        };
-
-        var chart = new google.visualization.PieChart(document.getElementById('piechart'));
-        chart.draw(data, options);
+    var options = {
+      title: 'Trading Behavior Distribution (Total Volume Bought vs. Sold)',
+      slices: {
+        0: { color: '#28a745' },
+        1: { color: '#dc3545' }
       }
-    </script>
-  </head>
-  <body>
-    <h1>Portfolio Operational Analytics Dashboard</h1>
-    <hr>
-    
-    <div id="curve_chart" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
-    
-    <hr>
+    };
 
-    <div id="curve_chart_total" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
+    var chart = new google.visualization.PieChart(document.getElementById('piechart'));
+    chart.draw(data, options);
+      }
+  </script>
+</head>
 
-    <hr>
-    
-    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div id="top_x_div" style="width: 100%; max-width: 600px; height: 400px;"></div>
-        
-        <div id="piechart" style="width: 100%; max-width: 500px; height: 400px;"></div>
-    </div>
-  </body>
+<body>
+  <h1>Portfolio Operational Analytics Dashboard</h1>
+  <hr>
+
+  <div id="curve_chart" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
+
+  <hr>
+
+  <div id="curve_chart_total" style="width: 100%; max-width: 1000px; height: 350px; margin-bottom: 40px;"></div>
+
+  <hr>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+    <div id="top_x_div" style="width: 100%; max-width: 600px; height: 400px;"></div>
+
+    <div id="piechart" style="width: 100%; max-width: 500px; height: 400px;"></div>
+  </div>
+</body>
+
 </html>
